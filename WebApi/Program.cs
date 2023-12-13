@@ -10,12 +10,11 @@ builder.Services.AddHttpClient();
 // Register Elasticsearch
 var elasticsearchUri = builder.Configuration.GetConnectionString("ElasticsearchConnection");
 
-// Cấu hình Elasticsearch
 var settings = new ConnectionSettings(new Uri(elasticsearchUri))
-    .DefaultIndex("your_default_index"); 
+    .DefaultIndex("country"); 
 
 var client = new ElasticClient(settings);
-
+builder.Services.AddLogging();
 builder.Services.AddSingleton<IElasticClient>(client);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
