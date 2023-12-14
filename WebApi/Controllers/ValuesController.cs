@@ -39,7 +39,7 @@ namespace WebApi.Controllers
                 sw.Stop();
 
                 logger.LogInformation(sw.ElapsedMilliseconds.ToString());
-                return Ok(jsonResponse);
+                return Ok();
             }
             catch (HttpRequestException)
             {
@@ -53,7 +53,6 @@ namespace WebApi.Controllers
         {
             try
             {
-                // Perform Elasticsearch search using cca2
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
                     .Query(q => q
                         .Match(m => m
@@ -77,13 +76,13 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("SearchByLanguage/{language}")]
-        public async Task<IActionResult> GetByAlphaCode(string language)
+        public async Task<IActionResult> SearchByLanguage(string language)
         {
             try
             {
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
                     .Query(q => q
-                        .Match(m => m
+                        .MatchPhrase(m => m
                             .Field(f => f.Languages)
                             .Query(language)
                         )
@@ -108,9 +107,9 @@ namespace WebApi.Controllers
         {
             try
             {
-                var countries = JsonConvert.DeserializeObject<IList<CountryModel>>(jsonData);
+                var countries = JsonConvert.DeserializeObject<IEnumerable<CountryModel>>(jsonData);
 
-                var bulkIndexResponse = await _elasticClient.IndexManyAsync(countries.Concat(countries));
+                var bulkIndexResponse = await _elasticClient.IndexManyAsync(countries);
 
                 if (bulkIndexResponse.IsValid)
                 {

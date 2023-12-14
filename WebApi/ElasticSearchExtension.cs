@@ -15,7 +15,7 @@ public static class ElasticSearchExtension
     }
     private static void AddDefaultMappings(ConnectionSettings settings)
     {
-        settings.DefaultMappingFor<CountryModel>(m => m.Ignore(p => p.Name).Ignore(p => p.Cca2));
+        settings.DefaultMappingFor<CountryModel>(m => m.Ignore(p => p.Languages).Ignore(p => p.Cca2));
     }
     private static void CreateIndex(IElasticClient client, string indexName)
     {
