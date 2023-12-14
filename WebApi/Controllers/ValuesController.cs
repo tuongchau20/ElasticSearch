@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Nest;
+using Newtonsoft.Json;
+using System.Diagnostics;
+
 
 namespace WebApi.Controllers
 {
@@ -10,10 +12,14 @@ namespace WebApi.Controllers
     public class ValuesController : ControllerBase
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IElasticClient _elasticClient;
+        private readonly ILogger<ValuesController> logger;
 
-        public ValuesController(IHttpClientFactory httpClientFactory)
+        public ValuesController(IHttpClientFactory httpClientFactory, IElasticClient elasticClient, ILogger<ValuesController> logger)
         {
             _httpClientFactory = httpClientFactory;
+            _elasticClient = elasticClient;
+            this.logger = logger;
         }
 
         [HttpGet("GetAll")]
@@ -26,6 +32,13 @@ namespace WebApi.Controllers
 
                 var jsonResponse = await httpClient.GetStringAsync(apiUrl);
 
+                // Index data 
+                Stopwatch sw = Stopwatch.StartNew();
+                await IndexDataIntoElasticsearch(jsonResponse);
+
+                sw.Stop();
+
+                logger.LogInformation(sw.ElapsedMilliseconds.ToString());
                 return Ok(jsonResponse);
             }
             catch (HttpRequestException)
@@ -34,46 +47,86 @@ namespace WebApi.Controllers
             }
         }
 
-        [HttpGet("GetByCCA2/{cca2}")]
+
+        [HttpGet("SearchByCCA2/{cca2}")]
         public async Task<IActionResult> GetByCCA2(string cca2)
         {
             try
             {
-                var httpClient = _httpClientFactory.CreateClient();
-                var response = await httpClient.GetAsync($"https://restcountries.com/v3.1/alpha/{cca2}");
+                // Perform Elasticsearch search using cca2
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
+                    .Query(q => q
+                        .Match(m => m
+                            .Field(f => f.Cca2)
+                            .Query(cca2)
+                        )
+                    )
+                );
 
-                if (response.IsSuccessStatusCode)
+                if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
-                    return Ok(await response.Content.ReadAsStringAsync());
+                    return Ok(searchResponse.Documents);
                 }
 
                 return NotFound();
             }
-            catch (HttpRequestException)
+            catch (Exception)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
 
-        [HttpGet("GetByAlphaCode/{alphaCode}")]
-        public async Task<IActionResult> GetByAlphaCode(string alphaCode)
+        [HttpGet("SearchByLanguage/{language}")]
+        public async Task<IActionResult> GetByAlphaCode(string language)
         {
             try
             {
-                var httpClient = _httpClientFactory.CreateClient();
-                var response = await httpClient.GetAsync($"https://restcountries.com/v3.1/alpha/{alphaCode}");
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
+                    .Query(q => q
+                        .Match(m => m
+                            .Field(f => f.Languages)
+                            .Query(language)
+                        )
+                    )
+                );
 
-                if (response.IsSuccessStatusCode)
+                if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
-                    return Ok(await response.Content.ReadAsStringAsync());
+                    return Ok(searchResponse.Documents);
                 }
 
                 return NotFound();
             }
-            catch (HttpRequestException)
+            catch (Exception)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
+
+        // index data into Elasticsearch
+        private async Task IndexDataIntoElasticsearch(string jsonData)
+        {
+            try
+            {
+                var countries = JsonConvert.DeserializeObject<IList<CountryModel>>(jsonData);
+
+                var bulkIndexResponse = await _elasticClient.IndexManyAsync(countries.Concat(countries));
+
+                if (bulkIndexResponse.IsValid)
+                {
+                    Console.WriteLine("Data indexed successfully");
+                }
+                else
+                {
+                    Console.WriteLine($"Error indexing data: {bulkIndexResponse.DebugInformation}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+
+
     }
 }
