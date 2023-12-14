@@ -6,7 +6,7 @@ public static class ElasticSearchExtension
     {
         var baseUrl = configuration["ElasticSettings:baseUrl"];
         var index = configuration["ElasticSettings:defaultIndex"];
-        var settings = new ConnectionSettings(new Uri(baseUrl ?? "")).PrettyJson().CertificateFingerprint("0b9fc114299b7820b1747a88415efe62b8bd42d75e5401c18a3bcb4a33345c2a").BasicAuthentication("elastic", "LafljCs+QP*ru9lzGWNU").DefaultIndex(index);
+        var settings = new ConnectionSettings(new Uri(baseUrl ?? "")).PrettyJson().CertificateFingerprint("28c0fac51835694784ff25005c48b7c6f8d0f63a6853f345c9c53a5f09ab7bf2").BasicAuthentication("elastic","bmCoh=*ixVVbSSdmyFTP").DefaultIndex(index);
         settings.EnableApiVersioningHeader();
         AddDefaultMappings(settings);
         var client = new ElasticClient(settings);

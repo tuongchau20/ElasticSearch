@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+﻿// ... (các using statements)
+
+using Elasticsearch.Net;
+using Microsoft.AspNetCore.Mvc;
 using Nest;
 using Newtonsoft.Json;
 using System.Diagnostics;
-
 
 namespace WebApi.Controllers
 {
@@ -27,41 +28,54 @@ namespace WebApi.Controllers
         {
             try
             {
+                if (_elasticClient == null)
+                {
+                    logger.LogError("Elasticsearch client is not initialized");
+                    return StatusCode(StatusCodes.Status500InternalServerError, "Elasticsearch client is not initialized");
+                }
+
                 var apiUrl = "https://restcountries.com/v3.1/all";
                 var httpClient = _httpClientFactory.CreateClient();
 
                 var jsonResponse = await httpClient.GetStringAsync(apiUrl);
 
-                // Index data 
                 Stopwatch sw = Stopwatch.StartNew();
                 await IndexDataIntoElasticsearch(jsonResponse);
-
                 sw.Stop();
 
-                logger.LogInformation(sw.ElapsedMilliseconds.ToString());
+                logger.LogInformation($"Indexing data took {sw.ElapsedMilliseconds} milliseconds");
                 return Ok();
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
+                logger.LogError($"HTTP request error: {ex.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, "HTTP request error");
+            }
+            catch (ElasticsearchClientException esEx)
+            {
+                logger.LogError($"Elasticsearch error: {esEx.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Elasticsearch error");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Error: {ex.Message}");
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
-
 
         [HttpGet("SearchByCCA2/{cca2}")]
         public async Task<IActionResult> GetByCCA2(string cca2)
         {
             try
             {
-                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
-                    .Query(q => q
-                        .Match(m => m
-                            .Field(f => f.Cca2)
-                            .Query(cca2)
-                        )
-                    )
+                if (_elasticClient == null)
+                {
+                    logger.LogError("Elasticsearch client is not initialized");
+                    return StatusCode(StatusCodes.Status500InternalServerError, "Elasticsearch client is not initialized");
+                }
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => 
+                     s.Query(q => q.QueryString(d => d.Query('*' + cca2 + '*'))).Size(5000)
                 );
-
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
                     return Ok(searchResponse.Documents);
@@ -69,24 +83,31 @@ namespace WebApi.Controllers
 
                 return NotFound();
             }
-            catch (Exception)
+            catch (ElasticsearchClientException esEx)
             {
+                logger.LogError($"Elasticsearch error: {esEx.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Elasticsearch error");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Error: {ex.Message}");
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
 
         [HttpGet("SearchByLanguage/{language}")]
-        public async Task<IActionResult> SearchByLanguage(string language)
+        public async Task<IActionResult> GetByAlphaCode(string language)
         {
             try
             {
-                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
-                    .Query(q => q
-                        .MatchPhrase(m => m
-                            .Field(f => f.Languages)
-                            .Query(language)
-                        )
-                    )
+                if (_elasticClient == null)
+                {
+                    logger.LogError("Elasticsearch client is not initialized");
+                    return StatusCode(StatusCodes.Status500InternalServerError, "Elasticsearch client is not initialized");
+                }
+
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
+                     s.Query(q => q.QueryString(d => d.Query('*' + language + '*'))).Size(5000)
                 );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
@@ -96,8 +117,14 @@ namespace WebApi.Controllers
 
                 return NotFound();
             }
-            catch (Exception)
+            catch (ElasticsearchClientException esEx)
             {
+                logger.LogError($"Elasticsearch error: {esEx.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Elasticsearch error");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Error: {ex.Message}");
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
@@ -107,25 +134,38 @@ namespace WebApi.Controllers
         {
             try
             {
+                if (string.IsNullOrEmpty(jsonData))
+                {
+                    logger.LogWarning("JSON data is empty or null");
+                    return;
+                }
+
                 var countries = JsonConvert.DeserializeObject<IEnumerable<CountryModel>>(jsonData);
+
+                if (countries == null)
+                {
+                    logger.LogWarning("Deserialized countries list is null");
+                    return;
+                }
 
                 var bulkIndexResponse = await _elasticClient.IndexManyAsync(countries);
 
-                if (bulkIndexResponse.IsValid)
+                if (!bulkIndexResponse.IsValid)
                 {
-                    Console.WriteLine("Data indexed successfully");
+                    foreach (var itemWithError in bulkIndexResponse.ItemsWithErrors)
+                    {
+                        logger.LogError($"Error indexing data: {itemWithError.Error.Reason}");
+                    }
                 }
-                else
-                {
-                    Console.WriteLine($"Error indexing data: {bulkIndexResponse.DebugInformation}");
-                }
+            }
+            catch (ElasticsearchClientException esEx)
+            {
+                logger.LogError($"Elasticsearch error: {esEx.Message}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                logger.LogError($"Error: {ex.Message}");
             }
         }
-
-
     }
 }
