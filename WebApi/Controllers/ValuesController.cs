@@ -29,15 +29,11 @@ namespace WebApi.Controllers
             {
                 var apiUrl = "https://restcountries.com/v3.1/all";
                 var httpClient = _httpClientFactory.CreateClient();
-
                 var jsonResponse = await httpClient.GetStringAsync(apiUrl);
-
                 // Index data 
                 Stopwatch sw = Stopwatch.StartNew();
                 await IndexDataIntoElasticsearch(jsonResponse);
-
                 sw.Stop();
-
                 logger.LogInformation(sw.ElapsedMilliseconds.ToString());
                 return Ok();
             }
@@ -48,18 +44,13 @@ namespace WebApi.Controllers
         }
 
 
-        [HttpGet("SearchByCCA2/{cca2}")]
-        public async Task<IActionResult> GetByCCA2(string cca2)
+        [HttpGet("SearchByCCA2/{ccn3}")]
+        public async Task<IActionResult> GetByCCA2(string ccn3)
         {
             try
             {
-                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
-                    .Query(q => q
-                        .Match(m => m
-                            .Field(f => f.Cca2)
-                            .Query(cca2)
-                        )
-                    )
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
+                     s.Query(q => q.QueryString(d => d.Query('*' + ccn3 + '*'))).Size(5000)
                 );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
@@ -75,18 +66,13 @@ namespace WebApi.Controllers
             }
         }
 
-        [HttpGet("SearchByLanguage/{language}")]
-        public async Task<IActionResult> SearchByLanguage(string language)
+        [HttpGet("SearchByLanguage/{cca3}")]
+        public async Task<IActionResult> SearchByLanguage(string cca3)
         {
             try
             {
-                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
-                    .Query(q => q
-                        .MatchPhrase(m => m
-                            .Field(f => f.Languages)
-                            .Query(language)
-                        )
-                    )
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
+                          s.Query(q => q.QueryString(d => d.Query('*' + cca3 + '*'))).Size(5000)
                 );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
