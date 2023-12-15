@@ -1,22 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
-using Nest;
-
-var builder = WebApplication.CreateBuilder(args);
+﻿var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
+//elasticsearch
+builder.Services.AddElasticSearch(builder.Configuration);
 
-// Register Elasticsearch
-var elasticsearchUri = builder.Configuration.GetConnectionString("ElasticsearchConnection");
-
-// Cấu hình Elasticsearch
-var settings = new ConnectionSettings(new Uri(elasticsearchUri))
-    .DefaultIndex("your_default_index"); 
-
-var client = new ElasticClient(settings);
-
-builder.Services.AddSingleton<IElasticClient>(client);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -30,6 +19,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(options =>
+{
+    options.AllowAnyOrigin();
+    options.AllowAnyMethod();
+    options.AllowAnyHeader();
+});
 
 app.UseAuthorization();
 app.MapControllers();
