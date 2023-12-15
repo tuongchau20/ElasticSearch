@@ -44,7 +44,7 @@ namespace WebApi.Controllers
         }
 
 
-        [HttpGet("SearchByCCA2/{ccn3}")]
+        [HttpGet("SearchByCCN3/{ccn3}")]
         public async Task<IActionResult> GetByCCA2(string ccn3)
         {
             try
@@ -66,14 +66,14 @@ namespace WebApi.Controllers
             }
         }
 
-        [HttpGet("SearchByLanguage/{cca3}")]
+        [HttpGet("SearchByCCA3/{cca3}")]
         public async Task<IActionResult> SearchByLanguage(string cca3)
         {
             try
             {
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
                           s.Query(q => q.QueryString(d => d.Query('*' + cca3 + '*'))).Size(5000)
-                );
+                     );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
