@@ -43,7 +43,35 @@ namespace WebApi.Controllers
             }
         }
 
+        [HttpGet("SearchByName/{query}")]
+        public async Task<IActionResult> SearchByName(string query)
+        {
+            try
+            {
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
+         s.Query(q => q
+             .Bool(b => b
+                 .Should(
+                     sh => sh.QueryString(qs => qs.Query('*' + query + '*').Fields(f => f.Field(ff => ff.Name.common))),
+                     sh => sh.QueryString(qs => qs.Query('*' + query + '*').Fields(f => f.Field(ff => ff.Name.official))),
+                     sh => sh.QueryString(qs => qs.Query('*' + query + '*').Fields(f => f.Field(ff => ff.Name.nativeName)))
+                 )
+             )
+         )
+         .Size(5000));
 
+                if (searchResponse.IsValid && searchResponse.Documents.Any())
+                {
+                    return Ok(searchResponse.Documents);
+                }
+
+                return NotFound();
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error");
+            }
+        }
         [HttpGet("SearchByCCN3/{ccn3}")]
         public async Task<IActionResult> GetByCCA2(string ccn3)
         {
@@ -66,13 +94,13 @@ namespace WebApi.Controllers
             }
         }
 
-        [HttpGet("SearchByCCA3/{cca3}")]
-        public async Task<IActionResult> SearchByLanguage(string cca3)
+        [HttpGet("SearchByCCA2/{cca2}")]
+        public async Task<IActionResult> SearchByCCA2(string cca2)
         {
             try
             {
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-                          s.Query(q => q.QueryString(d => d.Query('*' + cca3 + '*'))).Size(5000)
+                          s.Query(q => q.QueryString(d => d.Query('*' + cca2 + '*'))).Size(5000)
                      );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
@@ -87,7 +115,27 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
+        [HttpGet("SearchByLanguage/{language}")]
+        public async Task<IActionResult> SearchByLanguage(string language)
+        {
+            try
+            {
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
+                          s.Query(q => q.QueryString(d => d.Query('*' + language + '*'))).Size(5000)
+                     );
 
+                if (searchResponse.IsValid && searchResponse.Documents.Any())
+                {
+                    return Ok(searchResponse.Documents);
+                }
+
+                return NotFound();
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error");
+            }
+        }
         // index data into Elasticsearch
         private async Task IndexDataIntoElasticsearch(string jsonData)
         {
