@@ -58,7 +58,7 @@ namespace WebApi.Controllers
                  )
              )
          )
-         .Size(5000));
+         .Size(5));
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
@@ -78,7 +78,7 @@ namespace WebApi.Controllers
             try
             {
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-                     s.Query(q => q.QueryString(d => d.Query('*' + ccn3 + '*'))).Size(5000)
+                     s.Query(q => q.QueryString(d => d.Query('*' + ccn3 + '*'))).Size(5)
                 );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
@@ -100,7 +100,7 @@ namespace WebApi.Controllers
             try
             {
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-                          s.Query(q => q.QueryString(d => d.Query('*' + cca2 + '*'))).Size(5000)
+                          s.Query(q => q.QueryString(d => d.Query('*' + cca2 + '*'))).Size(5)
                      );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
@@ -121,7 +121,7 @@ namespace WebApi.Controllers
             try
             {
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-                          s.Query(q => q.QueryString(d => d.Query('*' + language + '*'))).Size(5000)
+                          s.Query(q => q.QueryString(d => d.Query('*' + language + '*'))).Size(5)
                      );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
