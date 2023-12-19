@@ -143,27 +143,7 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
-        [HttpGet("SearchByLanguage/{language}")]
-        public async Task<IActionResult> SearchByLanguage(string language)
-        {
-            try
-            {
-                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-                          s.Query(q => q.QueryString(d => d.Query('*' + language + '*'))).Size(5)
-                     );
-
-                if (searchResponse.IsValid && searchResponse.Documents.Any())
-                {
-                    return Ok(searchResponse.Documents);
-                }
-
-                return NotFound();
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error");
-            }
-        }
+       
         // index data into Elasticsearch
         private async Task IndexDataIntoElasticsearch(string jsonData)
         {
