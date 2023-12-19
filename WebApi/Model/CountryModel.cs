@@ -2,51 +2,54 @@
 using System;
 using System.Collections.Generic;
 using static CountryModel;
+public class CountryName : OfficalCommon
+{
+    [Nested]
 
+    public Dictionary<string, OfficalCommon> nativeName { get; set; }
+}
+
+public class Currency
+{
+    public string Name { get; set; }
+    public string Symbol { get; set; }
+}
+public class OfficalCommon
+{
+    public string common { get; set; }
+    public string official { get; set; }
+}
+public class IDD
+{
+    public string root { get; set; }
+    public List<string> suffixes { get; set; }
+}
+
+
+public class DemonymInfo
+{
+    public string f { get; set; }
+    public string m { get; set; }
+}
+public class Map
+{
+    public string googleMaps { get; set; }
+    public string openStreetMaps { get; set; }
+}
+public class Cars
+{
+    public List<string> Signs { get; set; }
+    public string Side { get; set; }
+}
+
+
+public class CapitalInfos
+{
+    public List<double> LatLng { get; set; }
+}
 public class CountryModel
 {
-    public class CountryName:OfficalCommon
-    {
-        public Dictionary<string, OfficalCommon> nativeName { get; set; }
-    }
-   
-    public class Currency
-    {
-        public string Name { get; set; }
-        public string Symbol { get; set; }
-    }
-    public class OfficalCommon
-    {
-        public string common { get; set; }
-        public string official { get; set; }
-    }
-    public class IDD
-    {
-        public string root { get; set; }
-        public List<string> suffixes { get; set; }
-    }
- 
   
-    public class DemonymInfo
-    {
-        public string f { get; set; }
-        public string m { get; set; }
-    }
-    public class Map
-    {
-        public string googleMaps { get; set; }
-        public string openStreetMaps { get; set; }
-    }
-    public class Cars {
-        public List<string> Signs {  get; set; }
-        public string Side { get; set; }
-    }
-
-
-    public class CapitalInfos
-    {
-        public List<double> LatLng { get; set; }
-    }
 
     public CountryModel()
     {
@@ -81,8 +84,7 @@ public class CountryModel
         CoatOfArms = new Dictionary<string, string>();
     }
 
-
-
+    [Nested]
     public CountryName Name { get; set; }
     public string flag { get; set; }
     public string Cca2 { get; set; }
