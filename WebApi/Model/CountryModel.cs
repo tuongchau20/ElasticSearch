@@ -5,7 +5,6 @@ using static CountryModel;
 public class CountryName : OfficalCommon
 {
     [Nested]
-
     public Dictionary<string, OfficalCommon> nativeName { get; set; }
 }
 

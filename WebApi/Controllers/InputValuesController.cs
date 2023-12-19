@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Nest;
 using System;
 using System.Diagnostics;
@@ -13,10 +14,12 @@ namespace WebApi.Controllers
     public class SearchController : ControllerBase
     {
         private readonly IElasticClient _elasticClient;
+        private readonly ILogger<SearchController> _logger;
 
-        public SearchController(IElasticClient elasticClient)
+        public SearchController(IElasticClient elasticClient, ILogger<SearchController> logger)
         {
             _elasticClient = elasticClient;
+            _logger = logger;
         }
 
         [HttpPost("Search")]
@@ -27,8 +30,8 @@ namespace WebApi.Controllers
                 var field = filter.Field?.ToString();
                 var value = filter.Value?.ToString();
 
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
+
+                Stopwatch sw = Stopwatch.StartNew();
 
                 ISearchResponse<CountryModel> searchResponse;
 
@@ -56,16 +59,14 @@ namespace WebApi.Controllers
                     );
                 }
 
-                stopwatch.Stop();
+                sw.Stop();
 
-                TimeSpan executionTime = stopwatch.Elapsed;
-
+                _logger.LogInformation(sw.ElapsedMilliseconds.ToString());
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
                     return Ok(new
                     {
-                        ExecutionTime = executionTime.TotalMilliseconds + " ms",
-                        Results = searchResponse.Documents
+                      searchResponse.Documents
                     });
                 }
 
