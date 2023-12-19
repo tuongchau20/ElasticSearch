@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Nest;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using WebApi.DTO;
 
@@ -12,10 +14,12 @@ namespace WebApi.Controllers
     public class SearchController : ControllerBase
     {
         private readonly IElasticClient _elasticClient;
+        private readonly ILogger<SearchController> _logger;
 
-        public SearchController(IElasticClient elasticClient)
+        public SearchController(IElasticClient elasticClient, ILogger<SearchController> logger)
         {
             _elasticClient = elasticClient;
+            _logger = logger;
         }
 
         [HttpPost("Search")]
@@ -24,31 +28,45 @@ namespace WebApi.Controllers
             try
             {
                 var field = filter.Field?.ToString();
-                var @operator = filter.Operator?.ToString();
                 var value = filter.Value?.ToString();
 
-                if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(@operator) || string.IsNullOrWhiteSpace(value))
-                {
-                    return BadRequest("Invalid filter parameters.");
-                }
 
-                var searchResponse = _elasticClient.Search<CountryModel>(s => s
-                    .Query(q => q
-                        .Bool(b => b
-                            .Should(
-                                sh => sh
-                                    .Match(m => m
-                                        .Field(field)
-                                        .Query(value)
-                                    )
+                Stopwatch sw = Stopwatch.StartNew();
+
+                ISearchResponse<CountryModel> searchResponse;
+
+                if (string.IsNullOrWhiteSpace(field))
+                {
+                    searchResponse = _elasticClient.Search<CountryModel>(s => s
+                        .Query(q => q
+                            .QueryString(qs => qs
+                                .Query("*" + value + "*")
                             )
                         )
-                    ).Size(5)
-                );
-                
+                    );
+                }
+                else
+                {
+                    searchResponse = _elasticClient.Search<CountryModel>(s => s
+                        .Query(q => q
+                            .QueryString(qs => qs
+                                .Query("*" + value + "*")
+                                .DefaultField(field)
+                            )
+                        )
+                        .Size(5)
+                    );
+                }
+
+                sw.Stop();
+
+                _logger.LogInformation(sw.ElapsedMilliseconds.ToString());
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
-                    return Ok(searchResponse.Documents);
+                    return Ok(new
+                    {
+                      searchResponse.Documents
+                    });
                 }
 
                 return NotFound("No matching documents found.");
@@ -58,5 +76,7 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Error: {ex.Message}");
             }
         }
+
+
     }
 }
