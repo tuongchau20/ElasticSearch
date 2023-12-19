@@ -106,29 +106,12 @@ namespace WebApi.Controllers
             try
             {
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-                     s.Query(q => q.QueryString(d => d.Query('*' + ccn3 + '*'))).Size(5)
-                );
-
-                if (searchResponse.IsValid && searchResponse.Documents.Any())
-                {
-                    return Ok(searchResponse.Documents);
-                }
-
-                return NotFound();
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error");
-            }
-        }
-
-        [HttpGet("SearchByCCA2/{cca2}")]
-        public async Task<IActionResult> SearchByCCA2(string cca2)
-        {
-            try
-            {
-                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-                          s.Query(q => q.QueryString(d => d.Query('*' + cca2 + '*'))).Size(5)
+                          s.Query(q => q
+                              .Match(m => m
+                                  .Field(f => f.Ccn3)
+                                  .Query(ccn3)
+                              )
+                          ).Size(5)
                      );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
@@ -143,7 +126,35 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
-       
+        [HttpGet("SearchByCCA2/{cca2}")]
+        public async Task<IActionResult> SearchByCCA2(string cca2)
+        {
+            try
+            {
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
+                          s.Query(q => q
+                              .Match(m => m
+                                  .Field(f => f.Cca2)
+                                  .Query(cca2)
+                              )
+                          ).Size(5)
+                     );
+
+                if (searchResponse.IsValid && searchResponse.Documents.Any())
+                {
+                    return Ok(searchResponse.Documents);
+                }
+
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Error: {ex.Message}");
+            }
+        }
+
+
+
         // index data into Elasticsearch
         private async Task IndexDataIntoElasticsearch(string jsonData)
         {

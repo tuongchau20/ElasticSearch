@@ -43,7 +43,6 @@ namespace WebApi.Controllers
                                 .Query("*" + value + "*")
                             )
                         )
-                        .Size(5)
                     );
                 }
                 else
