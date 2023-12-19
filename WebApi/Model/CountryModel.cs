@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using static CountryModel;
 public class CountryName : OfficalCommon
 {
+    [Nested]
+
     public Dictionary<string, OfficalCommon> nativeName { get; set; }
 }
 
@@ -82,8 +84,7 @@ public class CountryModel
         CoatOfArms = new Dictionary<string, string>();
     }
 
-
-
+    [Nested]
     public CountryName Name { get; set; }
     public string flag { get; set; }
     public string Cca2 { get; set; }

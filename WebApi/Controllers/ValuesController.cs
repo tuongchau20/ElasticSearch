@@ -48,17 +48,41 @@ namespace WebApi.Controllers
         {
             try
             {
-                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-         s.Query(q => q
-             .Bool(b => b
-                 .Should(
-                     sh => sh.QueryString(qs => qs.Query('*' + query + '*').Fields(f => f.Field(ff => ff.Name.common))),
-                     sh => sh.QueryString(qs => qs.Query('*' + query + '*').Fields(f => f.Field(ff => ff.Name.official))),
-                     sh => sh.QueryString(qs => qs.Query('*' + query + '*').Fields(f => f.Field(ff => ff.Name.nativeName)))
-                 )
-             )
-         )
-         .Size(5));
+                var normalizedQuery = "*" + query + "*";
+                var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s => s
+                    .Query(q => q
+                        .Bool(b => b
+                            .Should(
+                                sh => sh.QueryString(qs => qs
+                                    .Query(normalizedQuery)
+                                    .Fields(f => f
+                                        .Field(ff => ff.Name.common)
+                                        .Field(ff => ff.Name.official)
+                                    )
+                                )
+                                //sh => sh.Nested(n => n
+                                //    .Path(p => p.Name.nativeName)
+                                //    .Query(nq => nq
+                                //        .Bool(nb => nb
+                                //            .Should(ns => ns
+                                //                .Match(m => m
+                                //                    .Field(f => f.Name.nativeName.Values.First().common)
+                                //                    .Query(query)
+                                //                ),
+                                //                ns => ns
+                                //                .Match(m => m
+                                //                    .Field(f => f.Name.nativeName.Values.First().official)
+                                //                    .Query(query)
+                                //                )
+                                //            )
+                                //        )
+                                //    )
+                                //)
+                            )
+                        )
+                    )
+                    .Size(5)
+                );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
@@ -67,13 +91,17 @@ namespace WebApi.Controllers
 
                 return NotFound();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error: " + ex.Message);
             }
         }
+
+
+
+
         [HttpGet("SearchByCCN3/{ccn3}")]
-        public async Task<IActionResult> GetByCCA2(string ccn3)
+        public async Task<IActionResult> GetByCCN3(string ccn3)
         {
             try
             {
