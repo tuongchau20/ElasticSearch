@@ -82,6 +82,7 @@ namespace WebApi.Controllers
                         )
                     )
                     .Size(5)
+                    .AllowPartialSearchResults(true)
                 );
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
@@ -105,14 +106,21 @@ namespace WebApi.Controllers
         {
             try
             {
+                Stopwatch sw = Stopwatch.StartNew();
+
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
-                          s.Query(q => q
-                              .Match(m => m
-                                  .Field(f => f.Ccn3)
-                                  .Query(ccn3)
-                              )
-                          ).Size(5)
-                     );
+                    s.Query(q => q
+                        .Match(m => m
+                            .Field(f => f.Ccn3)
+                            .Query("*" + ccn3 + "*")
+                        )
+                    ).Size(5)
+                     .AllowPartialSearchResults(true)
+                );
+
+                sw.Stop();
+
+                logger.LogInformation(sw.ElapsedMilliseconds.ToString());
 
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
@@ -126,20 +134,25 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
+
+
         [HttpGet("SearchByCCA2/{cca2}")]
         public async Task<IActionResult> SearchByCCA2(string cca2)
         {
             try
             {
+                Stopwatch sw = Stopwatch.StartNew();
                 var searchResponse = await _elasticClient.SearchAsync<CountryModel>(s =>
                           s.Query(q => q
                               .Match(m => m
                                   .Field(f => f.Cca2)
-                                  .Query(cca2)
+                                  .Query("+"+cca2+"+")
                               )
                           ).Size(5)
+                           .AllowPartialSearchResults(true)
                      );
-
+                sw.Stop();
+                logger.LogInformation(sw.ElapsedMilliseconds.ToString());
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
                     return Ok(searchResponse.Documents);
