@@ -30,42 +30,41 @@ namespace WebApi.Controllers
                 var field = filter.Field?.ToString();
                 var value = filter.Value?.ToString();
 
-
                 Stopwatch sw = Stopwatch.StartNew();
 
                 ISearchResponse<CountryModel> searchResponse;
 
+                QueryContainer queryContainer;
+
                 if (string.IsNullOrWhiteSpace(field))
                 {
-                    searchResponse = _elasticClient.Search<CountryModel>(s => s
-                        .Query(q => q
-                            .QueryString(qs => qs
-                                .Query("*" + value + "*")
-                            )
-                        )
-                    );
+                    queryContainer = new QueryStringQuery
+                    {
+                        Query = "*" + value + "*"
+                    };
                 }
                 else
                 {
-                    searchResponse = _elasticClient.Search<CountryModel>(s => s
-                        .Query(q => q
-                            .QueryString(qs => qs
-                                .Query("*" + value + "*")
-                                .DefaultField(field)
-                            )
-                        )
-                        .Size(5)
-                    );
+                    queryContainer = new QueryStringQuery
+                    {
+                        Query = "*" + value + "*",
+                        DefaultField = field
+                    };
                 }
+
+                searchResponse = _elasticClient.Search<CountryModel>(s => s
+                    .Query(q => queryContainer)
+                );
 
                 sw.Stop();
 
                 _logger.LogInformation(sw.ElapsedMilliseconds.ToString());
+
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
                     return Ok(new
                     {
-                      searchResponse.Documents
+                        searchResponse.Documents
                     });
                 }
 
@@ -76,7 +75,5 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Error: {ex.Message}");
             }
         }
-
-
     }
 }
