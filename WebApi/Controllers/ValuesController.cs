@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using WebApi.Model;
 
 
 namespace WebApi.Controllers
@@ -49,18 +50,18 @@ namespace WebApi.Controllers
         [HttpGet("GetAllDog")]
         public async Task<IActionResult> GetAllDog([FromQuery] string indexName)
         {
-            if (!IndexExists<CountryModel>(_elasticClient, indexName))
+            if (!IndexExists<DogModel>(_elasticClient, indexName))
             {
-                EnsureIndexExists<CountryModel>(_elasticClient, indexName);
+                EnsureIndexExists<DogModel>(_elasticClient, indexName);
             }
             try
             {
-                var apiUrl = "https://restcountries.com/v3.1/all";
+                var apiUrl = "https://api.algobook.info/v1/dogs/all";
                 var httpClient = _httpClientFactory.CreateClient();
                 var jsonResponse = await httpClient.GetStringAsync(apiUrl);
 
                 Stopwatch sw = Stopwatch.StartNew();
-                await IndexDataIntoElasticsearch<CountryModel>(jsonResponse, indexName);
+                await IndexDataIntoElasticsearch<DogModel>(jsonResponse, indexName);
                 sw.Stop();
                 logger.LogInformation(sw.ElapsedMilliseconds.ToString());
                 return Ok();
