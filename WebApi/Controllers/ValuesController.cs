@@ -22,17 +22,45 @@ namespace WebApi.Controllers
             this.logger = logger;
         }
 
-        [HttpGet("GetAll")]
-        public async Task<IActionResult> GetAll()
+        [HttpGet("GetAllCountries")]
+        public async Task<IActionResult> GetAllCountries([FromQuery] string indexName)
         {
+            if (!IndexExists<CountryModel>(_elasticClient, indexName))
+            {
+                EnsureIndexExists<CountryModel>(_elasticClient, indexName);
+            }
             try
             {
                 var apiUrl = "https://restcountries.com/v3.1/all";
                 var httpClient = _httpClientFactory.CreateClient();
                 var jsonResponse = await httpClient.GetStringAsync(apiUrl);
-                // Index data 
+
                 Stopwatch sw = Stopwatch.StartNew();
-                await IndexDataIntoElasticsearch<CountryModel>(jsonResponse);
+                await IndexDataIntoElasticsearch<CountryModel>(jsonResponse, indexName); 
+                sw.Stop();
+                logger.LogInformation(sw.ElapsedMilliseconds.ToString());
+                return Ok();
+            }
+            catch (HttpRequestException)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error");
+            }
+        }
+        [HttpGet("GetAllDog")]
+        public async Task<IActionResult> GetAllDog([FromQuery] string indexName)
+        {
+            if (!IndexExists<CountryModel>(_elasticClient, indexName))
+            {
+                EnsureIndexExists<CountryModel>(_elasticClient, indexName);
+            }
+            try
+            {
+                var apiUrl = "https://restcountries.com/v3.1/all";
+                var httpClient = _httpClientFactory.CreateClient();
+                var jsonResponse = await httpClient.GetStringAsync(apiUrl);
+
+                Stopwatch sw = Stopwatch.StartNew();
+                await IndexDataIntoElasticsearch<CountryModel>(jsonResponse, indexName);
                 sw.Stop();
                 logger.LogInformation(sw.ElapsedMilliseconds.ToString());
                 return Ok();
@@ -169,26 +197,57 @@ namespace WebApi.Controllers
 
 
         // index data into Elasticsearch
-        private async Task IndexDataIntoElasticsearch<T>(string jsonData) where T : class
+        private async Task IndexDataIntoElasticsearch<T>(string jsonData, string indexName) where T : class
         {
             try
             {
-                var countries = JsonConvert.DeserializeObject<IEnumerable<T>>(jsonData);
+                var items = JsonConvert.DeserializeObject<IEnumerable<T>>(jsonData);
 
-                var bulkIndexResponse = await _elasticClient.IndexManyAsync(countries);
-
+                var bulkIndexResponse = await _elasticClient.IndexManyAsync(items, indexName); 
                 if (bulkIndexResponse.IsValid)
                 {
-                    Console.WriteLine("Data indexed successfully");
+                    Console.WriteLine($"Data indexed successfully into index: {indexName}");
                 }
                 else
                 {
-                    Console.WriteLine($"Error indexing data: {bulkIndexResponse.DebugInformation}");
+                    Console.WriteLine($"Error indexing data into index {indexName}: {bulkIndexResponse.DebugInformation}");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+        private bool IndexExists<T>(IElasticClient client, string indexName) where T : class
+        {
+            var existsResponse = client.Indices.Exists(indexName);
+            return existsResponse.Exists;
+        }
+        private  void EnsureIndexExists<T>(IElasticClient client, string indexName) where T : class
+        {
+            var existsResponse = client.Indices.Exists(indexName);
+
+            if (!existsResponse.Exists)
+            {
+                var createIndexResponse = client.Indices.Create(indexName, c => c
+                    .Map<T>(m => m.AutoMap()));
+
+                if (!createIndexResponse.IsValid)
+                {
+                    Console.WriteLine($"Error creating index: {createIndexResponse.DebugInformation}");
+                }
+            }
+            else
+            {
+                // Update the index mapping
+                var response = client.Map<T>(m => m
+                    .Index(indexName)
+                    .AutoMap());
+
+                if (!response.IsValid)
+                {
+                    Console.WriteLine($"Error updating index mapping: {response.DebugInformation}");
+                }
             }
         }
 
