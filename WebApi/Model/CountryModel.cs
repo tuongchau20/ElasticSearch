@@ -1,6 +1,7 @@
 ﻿using Nest;
 using System;
 using System.Collections.Generic;
+using WebApi.Model;
 using static CountryModel;
 public class CountryName : OfficalCommon
 {

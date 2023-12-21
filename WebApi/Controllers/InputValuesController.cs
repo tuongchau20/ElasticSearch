@@ -22,8 +22,24 @@ namespace WebApi.Controllers
             _logger = logger;
         }
 
+        private async Task<bool> IsBooleanFieldAsync(string fieldName)
+        {
+            //1. Ánh xạ dữ liệu đến CountryModel sử dụng phương thức bất đồng bộ
+            var response = await _elasticClient.Indices.GetMappingAsync<object>();
+            //2. lấy dữ liệu trả về response 
+            var properties = response.Indices[typeof(CountryModel)].Mappings.Properties;
+            // Kiểm tra xem có thuộc tính fieldName trong danh sách các thuộc tính không
+            if (properties.TryGetValue(fieldName, out var property))
+            {
+                // Nếu có, kiểm tra xem kiểu dữ liệu của thuộc tính đó có phải là boolean không
+                return property.Type == "boolean";
+            }
+            // Nếu không tìm thấy thuộc tính, trả về false
+            return false;
+        }
+
         [HttpPost("Search")]
-        public IActionResult Search([FromBody] GenFilter filter)
+        public async Task<IActionResult> Search([FromBody] GenFilter filter)
         {
             try
             {
@@ -45,11 +61,27 @@ namespace WebApi.Controllers
                 }
                 else
                 {
-                    queryContainer = new QueryStringQuery
+                    if (await IsBooleanFieldAsync(field))
                     {
-                        Query = "*" + value + "*",
-                        DefaultField = field
-                    };
+                        if (!bool.TryParse(value, out bool boolValue))
+                        {
+                            return BadRequest("Invalid boolean value.");
+                        }
+
+                        queryContainer = new TermQuery
+                        {
+                            Field = field,
+                            Value = boolValue
+                        };
+                    }
+                    else
+                    {
+                        queryContainer = new QueryStringQuery
+                        {
+                            Query = "*" + value + "*",
+                            DefaultField = field
+                        };
+                    }
                 }
 
                 searchResponse = _elasticClient.Search<CountryModel>(s => s
