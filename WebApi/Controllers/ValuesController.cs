@@ -32,7 +32,7 @@ namespace WebApi.Controllers
                 var jsonResponse = await httpClient.GetStringAsync(apiUrl);
                 // Index data 
                 Stopwatch sw = Stopwatch.StartNew();
-                await IndexDataIntoElasticsearch(jsonResponse);
+                await IndexDataIntoElasticsearch<CountryModel>(jsonResponse);
                 sw.Stop();
                 logger.LogInformation(sw.ElapsedMilliseconds.ToString());
                 return Ok();
@@ -42,7 +42,7 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error");
             }
         }
-
+        #region SearchBy
         [HttpGet("SearchByName/{query}")]
         public async Task<IActionResult> SearchByName(string query)
         {
@@ -165,15 +165,15 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Error: {ex.Message}");
             }
         }
-
+        #endregion
 
 
         // index data into Elasticsearch
-        private async Task IndexDataIntoElasticsearch(string jsonData)
+        private async Task IndexDataIntoElasticsearch<T>(string jsonData) where T : class
         {
             try
             {
-                var countries = JsonConvert.DeserializeObject<IEnumerable<CountryModel>>(jsonData);
+                var countries = JsonConvert.DeserializeObject<IEnumerable<T>>(jsonData);
 
                 var bulkIndexResponse = await _elasticClient.IndexManyAsync(countries);
 
