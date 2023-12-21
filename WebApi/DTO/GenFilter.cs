@@ -2,7 +2,8 @@
 {
     public class GenFilter
     {
-        public object Field { get; set; }
+        public string IndexName { get; set; }
+        public string Field { get; set; }
         public object Value { get; set; }
     }
 
