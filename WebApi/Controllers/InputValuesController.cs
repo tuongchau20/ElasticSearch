@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging;
 using Nest;
 using System;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Linq;
 using WebApi.DTO;
+using WebApi.Model;
 
 namespace WebApi.Controllers
 {
@@ -21,18 +23,18 @@ namespace WebApi.Controllers
             _elasticClient = elasticClient;
             _logger = logger;
         }
-
         [HttpPost("Search")]
         public IActionResult Search([FromBody] GenFilter filter)
         {
             try
             {
-                var field = filter.Field?.ToString();
+                var field = filter.Field;
+                var indexName = filter.IndexName; 
                 var value = filter.Value?.ToString();
 
                 Stopwatch sw = Stopwatch.StartNew();
 
-                ISearchResponse<CountryModel> searchResponse;
+                ISearchResponse<ExpandoObject> searchResponse;
 
                 QueryContainer queryContainer;
 
@@ -52,7 +54,9 @@ namespace WebApi.Controllers
                     };
                 }
 
-                searchResponse = _elasticClient.Search<CountryModel>(s => s
+              
+                searchResponse = _elasticClient.Search<ExpandoObject>(s => s
+                    .Index(indexName) 
                     .Query(q => queryContainer)
                 );
 

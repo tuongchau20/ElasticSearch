@@ -1,4 +1,5 @@
-﻿using WebApi.Model;
+﻿using WebApi.Controllers;
+using WebApi.Model;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +9,7 @@ builder.Services.AddHttpClient();
 //elasticsearch
 builder.Services.AddElasticSearch<CountryModel>(builder.Configuration);
 builder.Services.AddElasticSearch<DogModel>(builder.Configuration);
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

@@ -1,6 +1,6 @@
 ﻿namespace WebApi.Model
 {
-    public class DogModel
+    public class DogModel 
     {
         public string name { get; set; }
         public int id { get; set; }
