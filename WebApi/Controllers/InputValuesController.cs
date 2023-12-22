@@ -23,18 +23,19 @@ namespace WebApi.Controllers
             _elasticClient = elasticClient;
             _logger = logger;
         }
+
         [HttpPost("Search")]
         public IActionResult Search([FromBody] GenFilter filter)
         {
             try
             {
                 var field = filter.Field;
-                var indexName = filter.IndexName; 
+                var indexName = filter.IndexName;
                 var value = filter.Value?.ToString();
 
                 Stopwatch sw = Stopwatch.StartNew();
 
-                ISearchResponse<ExpandoObject> searchResponse;
+                ISearchResponse<object> searchResponse;
 
                 QueryContainer queryContainer;
 
@@ -47,16 +48,28 @@ namespace WebApi.Controllers
                 }
                 else
                 {
-                    queryContainer = new QueryStringQuery
+                 if (value == "true" || value == "false")
                     {
-                        Query = "*" + value + "*",
-                        DefaultField = field
-                    };
+                        
+                        var boolValue = bool.Parse(value);
+                        queryContainer = new TermQuery
+                        {
+                            Field = field,
+                            Value = boolValue
+                        };
+                    }
+                    else
+                    {
+                        queryContainer = new QueryStringQuery
+                        {
+                            Query = "*" + value + "*",
+                            DefaultField = field
+                        };
+                    }
                 }
 
-              
-                searchResponse = _elasticClient.Search<ExpandoObject>(s => s
-                    .Index(indexName) 
+                searchResponse = _elasticClient.Search<object>(s => s
+                    .Index(indexName)
                     .Query(q => queryContainer)
                 );
 
@@ -72,7 +85,7 @@ namespace WebApi.Controllers
                     });
                 }
 
-                return NotFound("No matching documents found.");
+                return NotFound("No matching found.");
             }
             catch (Exception ex)
             {

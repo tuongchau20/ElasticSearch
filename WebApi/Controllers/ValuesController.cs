@@ -64,7 +64,7 @@ namespace WebApi.Controllers
                 await IndexDataIntoElasticsearch<DogModel>(jsonResponse, indexName);
                 sw.Stop();
                 logger.LogInformation(sw.ElapsedMilliseconds.ToString());
-                return Ok();
+                return Ok(jsonResponse);
             }
             catch (HttpRequestException)
             {
