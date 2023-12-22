@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging;
 using Nest;
 using System;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Linq;
 using WebApi.DTO;
+using WebApi.Model;
 
 namespace WebApi.Controllers
 {
@@ -21,51 +23,52 @@ namespace WebApi.Controllers
             _elasticClient = elasticClient;
             _logger = logger;
         }
-
         [HttpPost("Search")]
         public IActionResult Search([FromBody] GenFilter filter)
         {
             try
             {
-                var field = filter.Field?.ToString();
+                var field = filter.Field;
+                var indexName = filter.IndexName; 
                 var value = filter.Value?.ToString();
-
 
                 Stopwatch sw = Stopwatch.StartNew();
 
-                ISearchResponse<CountryModel> searchResponse;
+                ISearchResponse<ExpandoObject> searchResponse;
+
+                QueryContainer queryContainer;
 
                 if (string.IsNullOrWhiteSpace(field))
                 {
-                    searchResponse = _elasticClient.Search<CountryModel>(s => s
-                        .Query(q => q
-                            .QueryString(qs => qs
-                                .Query("*" + value + "*")
-                            )
-                        )
-                    );
+                    queryContainer = new QueryStringQuery
+                    {
+                        Query = "*" + value + "*"
+                    };
                 }
                 else
                 {
-                    searchResponse = _elasticClient.Search<CountryModel>(s => s
-                        .Query(q => q
-                            .QueryString(qs => qs
-                                .Query("*" + value + "*")
-                                .DefaultField(field)
-                            )
-                        )
-                        .Size(5)
-                    );
+                    queryContainer = new QueryStringQuery
+                    {
+                        Query = "*" + value + "*",
+                        DefaultField = field
+                    };
                 }
+
+              
+                searchResponse = _elasticClient.Search<ExpandoObject>(s => s
+                    .Index(indexName) 
+                    .Query(q => queryContainer)
+                );
 
                 sw.Stop();
 
                 _logger.LogInformation(sw.ElapsedMilliseconds.ToString());
+
                 if (searchResponse.IsValid && searchResponse.Documents.Any())
                 {
                     return Ok(new
                     {
-                      searchResponse.Documents
+                        searchResponse.Documents
                     });
                 }
 
@@ -76,7 +79,5 @@ namespace WebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Error: {ex.Message}");
             }
         }
-
-
     }
 }

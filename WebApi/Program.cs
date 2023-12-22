@@ -1,10 +1,14 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using WebApi.Controllers;
+using WebApi.Model;
+
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 //elasticsearch
-builder.Services.AddElasticSearch(builder.Configuration);
+builder.Services.AddElasticSearch<CountryModel>(builder.Configuration);
+builder.Services.AddElasticSearch<DogModel>(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
